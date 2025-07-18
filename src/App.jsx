@@ -188,15 +188,15 @@ const getWeekDays = (date) => {
 // IMPORTANT: Replace these placeholder values with your actual Firebase project configuration.
 // You can find this in your Firebase project settings.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "YOUR_API_KEY_HERE",
+  authDomain: "YOUR_AUTH_DOMAIN_HERE",
+  projectId: "YOUR_PROJECT_ID_HERE",
+  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+  appId: "YOUR_APP_ID_HERE"
 };
 
-const appId = import.meta.env.VITE_FIREBASE_APP_ID;
+const appId = firebaseConfig.appId;
 
 
 // --- Main App Component ---
@@ -705,7 +705,7 @@ function SettingsView({ currentSettings, onSave }) {
     const [settings, setSettingsState] = useState(currentSettings);
     const [newBlock, setNewBlock] = useState({ startDate: '', endDate: '', type: 'Vacation', description: '', allDay: true, startTime: '09:00', endTime: '17:00' });
     const [blockError, setBlockError] = useState('');
-    const [newRecurringEvent, setNewRecurringEvent] = useState({ dayIndex: 5, time: '09:00', name: 'Meeting', status: 'Booked' });
+    const [newRecurringEvent, setNewRecurringEvent] = useState({ dayIndex: 5, time: '09:00', name: '', isBillable: false });
 
     useEffect(() => {
         const settingsWithIds = { ...currentSettings };
@@ -754,18 +754,17 @@ function SettingsView({ currentSettings, onSave }) {
     };
     
     const handleAddRecurringEvent = () => {
-        const eventToAdd = { ...newRecurringEvent, id: crypto.randomUUID(), isBillable: false }; // Non-billable by default
+        const eventToAdd = { ...newRecurringEvent, id: crypto.randomUUID(), status: 'Booked' };
         const updatedEvents = [...(settings.recurringEvents || []), eventToAdd];
         setSettingsState({ ...settings, recurringEvents: updatedEvents });
-        setNewRecurringEvent({ dayIndex: 5, time: '09:00', name: 'Meeting', status: 'Booked' });
+        setNewRecurringEvent({ dayIndex: 5, time: '09:00', name: '', isBillable: false });
     };
 
     const handleDeleteRecurringEvent = (id) => {
         const updatedEvents = settings.recurringEvents.filter(e => e.id !== id);
         setSettingsState({ ...settings, recurringEvents: updatedEvents });
     };
-
-    const recurringEventTypes = ['Meeting', 'F2F', 'VVC', 'MBM', 'Lunch'];
+    
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Daily'];
 
     return (
@@ -804,7 +803,7 @@ function SettingsView({ currentSettings, onSave }) {
                             <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                 <div>
                                     <p className="font-semibold text-sm">{dayLabels[event.dayIndex]} at {event.time} - {event.name}</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">Status: {event.status}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">{event.isBillable ? "Counts towards utilization" : "Does not count towards utilization"}</p>
                                 </div>
                                 <button type="button" onClick={() => handleDeleteRecurringEvent(event.id)} className="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"><TrashIcon className="w-5 h-5"/></button>
                             </div>
@@ -823,9 +822,11 @@ function SettingsView({ currentSettings, onSave }) {
                             <option value="4">Friday</option>
                         </select>
                         <input type="time" value={newRecurringEvent.time} onChange={e => setNewRecurringEvent({...newRecurringEvent, time: e.target.value})} className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm sm:text-sm" />
-                        <select value={newRecurringEvent.name} onChange={e => setNewRecurringEvent({...newRecurringEvent, name: e.target.value})} className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm sm:text-sm">
-                            {recurringEventTypes.map(type => <option key={type} value={type}>{type}</option>)}
-                        </select>
+                        <input type="text" placeholder="Event Name (e.g., Meeting)" value={newRecurringEvent.name} onChange={e => setNewRecurringEvent({...newRecurringEvent, name: e.target.value})} className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm sm:text-sm" />
+                     </div>
+                     <div className="flex items-center">
+                        <input id="recurringBillable" type="checkbox" checked={newRecurringEvent.isBillable} onChange={e => setNewRecurringEvent({...newRecurringEvent, isBillable: e.target.checked})} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                        <label htmlFor="recurringBillable" className="ml-2 block text-sm">Count in Utilization</label>
                      </div>
                      <button type="button" onClick={handleAddRecurringEvent} className="w-full px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">Add Recurring Event</button>
                  </div>

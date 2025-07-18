@@ -24,7 +24,6 @@ const StickyNoteIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/200
 const PrinterIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>);
 const UserIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
 
-
 // --- UI Components ---
 const Card = ({ children, className = '' }) => ( <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm print:shadow-none print:border-gray-300 ${className}`}>{children}</div>);
 const CardHeader = ({ children, className = '' }) => ( <div className={`p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 ${className}`}>{children}</div>);
@@ -810,6 +809,14 @@ function ReportsView({ scheduleData }) {
         { label: 'Cancelled', value: statusCounts['Cancelled'] || 0, color: '#f97316' }, // Orange
         { label: 'Booked', value: statusCounts['Booked'] || 0, color: '#3b82f6' },
     ];
+    
+    const calculateUtilization = useCallback((slotsToCalculate) => {
+        const billable = slotsToCalculate.filter(s => s.isBillable !== false);
+        const working = billable.filter(s => s.status !== 'Available');
+        if (working.length === 0) return 0;
+        const utilized = working.filter(s => s.status === 'Completed' || s.status === 'No Show').length;
+        return (utilized / working.length) * 100;
+    }, []);
     
     const exportToCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,Date,Day,Time,Name,Status,Billable\r\n";

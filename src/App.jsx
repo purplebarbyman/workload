@@ -60,20 +60,31 @@ const UtilizationGauge = ({ percentage, title }) => {
     );
 };
 
-const Slot = ({ slotData, onEdit }) => {
-    const getStatusClasses = (status) => {
-        switch (status) {
-            case 'Booked': return 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900';
-            case 'Completed': return 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900';
-            case 'Cancelled': return 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900';
-            case 'No Show': return 'bg-yellow-100 dark:bg-yellow-900/50 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900';
-            default: return 'bg-gray-100 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+const getSlotClasses = (slotData) => {
+    // Custom color for recurring events takes precedence
+    if (slotData.customColor) {
+        switch (slotData.customColor) {
+            case 'purple': return 'bg-purple-100 dark:bg-purple-900/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-900';
+            case 'pink': return 'bg-pink-100 dark:bg-pink-900/50 border-pink-300 dark:border-pink-700 text-pink-800 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900';
+            case 'teal': return 'bg-teal-100 dark:bg-teal-900/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-900';
+            case 'gray': return 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600';
+            default: break;
         }
-    };
+    }
+    // Fallback to status-based colors
+    switch (slotData.status) {
+        case 'Booked': return 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900';
+        case 'Completed': return 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900';
+        case 'Cancelled': return 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900';
+        case 'No Show': return 'bg-yellow-100 dark:bg-yellow-900/50 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900';
+        default: return 'bg-gray-100 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+    }
+};
 
+const Slot = ({ slotData, onEdit }) => {
     return (
         <div className={`relative slot-${slotData.id}`}>
-            <div className={`p-2 rounded-lg border text-xs cursor-pointer h-full flex flex-col justify-center transition-colors ${getStatusClasses(slotData.status)}`} onClick={() => onEdit(slotData)}>
+            <div className={`p-2 rounded-lg border text-xs cursor-pointer h-full flex flex-col justify-center transition-colors ${getSlotClasses(slotData)}`} onClick={() => onEdit(slotData)}>
                 {slotData.isBillable === false && <DollarSignIcon className="absolute top-1 right-1 w-3 h-3 text-gray-400 dark:text-gray-500" />}
                 <p className="font-semibold">{slotData.time}</p>
                 <p className="truncate">{slotData.name || 'Standard'}</p>
@@ -94,19 +105,30 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
     const [name, setName] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
     const [isBillable, setIsBillable] = useState(true);
+    const [makeRecurring, setMakeRecurring] = useState(false);
 
     useEffect(() => {
         if (slot) {
             setName(slot.name || '');
             setCurrentStatus(slot.status || 'Available');
-            setIsBillable(slot.isBillable !== false); // Default to true if undefined
+            setIsBillable(slot.isBillable !== false);
+            setMakeRecurring(false); // Reset on new slot
         }
     }, [slot]);
 
     if (!isOpen || !slot) return null;
 
     const handleSave = () => {
-        onSave(slot.id, { name, status: currentStatus, isBillable });
+        const recurrenceInfo = makeRecurring ? {
+            dayIndex: slot.day,
+            time: slot.time,
+            name: name,
+            status: currentStatus,
+            isBillable: isBillable,
+            customColor: slot.customColor || null
+        } : null;
+
+        onSave(slot.id, { name, status: currentStatus, isBillable }, recurrenceInfo);
         onClose();
     };
     
@@ -143,10 +165,14 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
                             ))}
                         </div>
                     </div>
-                     <div>
+                     <div className="space-y-2">
                         <div className="flex items-center">
                             <input id="isBillable" type="checkbox" checked={isBillable} onChange={e => setIsBillable(e.target.checked)} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
                             <label htmlFor="isBillable" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Count in Utilization</label>
+                        </div>
+                         <div className="flex items-center">
+                            <input id="makeRecurring" type="checkbox" checked={makeRecurring} onChange={e => setMakeRecurring(e.target.checked)} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                            <label htmlFor="makeRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Make this a recurring event</label>
                         </div>
                     </div>
                 </div>
@@ -355,7 +381,6 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
             };
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Ensure all settings objects have default arrays if they are missing
                 setSettings({ ...defaultSettings, ...data });
             } else {
                 setDoc(settingsDocRef, defaultSettings);
@@ -397,6 +422,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
                                 newSlots[slotIndex].name = event.name;
                                 newSlots[slotIndex].status = event.status;
                                 newSlots[slotIndex].isBillable = event.isBillable;
+                                newSlots[slotIndex].customColor = event.color;
                             }
                         }
                     } else { // Specific day event
@@ -405,6 +431,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
                             newSlots[slotIndex].name = event.name;
                             newSlots[slotIndex].status = event.status;
                             newSlots[slotIndex].isBillable = event.isBillable;
+                            newSlots[slotIndex].customColor = event.color;
                         }
                     }
                 });
@@ -413,12 +440,38 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
         }
     }, [currentDate, scheduleData, settings]);
     
-    const updateSlot = async (id, newValues) => {
+    const handleSlotSave = async (id, newValues, recurrenceInfo) => {
         if (!db || !user) return;
+        
+        // If making an event recurring, we remove any custom color so it can be controlled by the recurring event setting.
+        const finalValues = { ...newValues };
+        if (recurrenceInfo) {
+            finalValues.customColor = recurrenceInfo.customColor;
+        } else {
+            // If just a single edit, remove custom color to revert to status-based coloring
+            const oldSlot = currentSlots.find(s => s.id === id);
+            if (oldSlot.customColor) {
+                finalValues.customColor = null;
+            }
+        }
+
+        // 1. Update the current week's slot
         const weekKey = getWeekKey(currentDate);
-        const updatedSlots = currentSlots.map(slot => slot.id === id ? { ...slot, ...newValues } : slot);
+        const updatedSlots = currentSlots.map(slot => slot.id === id ? { ...slot, ...finalValues } : slot);
         const scheduleDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/schedule`, weekKey);
         await setDoc(scheduleDocRef, { slots: updatedSlots });
+
+        // 2. If recurrence is requested, update the settings
+        if (recurrenceInfo) {
+            const settingsDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/settings/main`);
+            const eventToAdd = { ...recurrenceInfo, id: crypto.randomUUID() };
+            
+            const existingEvents = settings.recurringEvents || [];
+            const filteredEvents = existingEvents.filter(e => !(e.dayIndex === eventToAdd.dayIndex && e.time === eventToAdd.time));
+
+            const updatedEvents = [...filteredEvents, eventToAdd];
+            await setDoc(settingsDocRef, { ...settings, recurringEvents: updatedEvents });
+        }
     };
 
     const handleSettingsSave = async (newSettings) => {
@@ -436,7 +489,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
 
     const renderPage = () => {
         switch (page) {
-            case 'schedule': return <ScheduleView currentDate={currentDate} setCurrentDate={setCurrentDate} currentSlots={currentSlots} onUpdateSlot={updateSlot} scheduleData={scheduleData} settings={settings} />;
+            case 'schedule': return <ScheduleView currentDate={currentDate} setCurrentDate={setCurrentDate} currentSlots={currentSlots} onSaveSlot={handleSlotSave} scheduleData={scheduleData} settings={settings} />;
             case 'reports': return <ReportsView scheduleData={scheduleData} />;
             case 'settings': return <SettingsView currentSettings={settings} onSave={handleSettingsSave} />;
             default: return <ScheduleView />;
@@ -484,7 +537,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
 
 // --- Page Components ---
 
-function ScheduleView({ currentDate, setCurrentDate, currentSlots, onUpdateSlot, scheduleData, settings }) {
+function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, scheduleData, settings }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState(null);
 
@@ -571,7 +624,7 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onUpdateSlot,
 
     return (
         <>
-            <EditSlotModal isOpen={isModalOpen} slot={editingSlot} onSave={onUpdateSlot} onClose={handleCloseModal} />
+            <EditSlotModal isOpen={isModalOpen} slot={editingSlot} onSave={onSaveSlot} onClose={handleCloseModal} />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <UtilizationGauge percentage={dailyUtilization} title="Daily" />
                 <UtilizationGauge percentage={weeklyUtilization} title="Weekly" />
@@ -705,7 +758,7 @@ function SettingsView({ currentSettings, onSave }) {
     const [settings, setSettingsState] = useState(currentSettings);
     const [newBlock, setNewBlock] = useState({ startDate: '', endDate: '', type: 'Vacation', description: '', allDay: true, startTime: '09:00', endTime: '17:00' });
     const [blockError, setBlockError] = useState('');
-    const [newRecurringEvent, setNewRecurringEvent] = useState({ dayIndex: 5, time: '09:00', name: '', isBillable: false });
+    const [newRecurringEvent, setNewRecurringEvent] = useState({ dayIndex: 5, time: '09:00', name: '', isBillable: false, color: 'gray' });
 
     useEffect(() => {
         const settingsWithIds = { ...currentSettings };
@@ -757,7 +810,7 @@ function SettingsView({ currentSettings, onSave }) {
         const eventToAdd = { ...newRecurringEvent, id: crypto.randomUUID(), status: 'Booked' };
         const updatedEvents = [...(settings.recurringEvents || []), eventToAdd];
         setSettingsState({ ...settings, recurringEvents: updatedEvents });
-        setNewRecurringEvent({ dayIndex: 5, time: '09:00', name: '', isBillable: false });
+        setNewRecurringEvent({ dayIndex: 5, time: '09:00', name: '', isBillable: false, color: 'gray' });
     };
 
     const handleDeleteRecurringEvent = (id) => {
@@ -766,6 +819,12 @@ function SettingsView({ currentSettings, onSave }) {
     };
     
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Daily'];
+    const colorOptions = [
+        { name: 'Gray', value: 'gray', class: 'bg-gray-500' },
+        { name: 'Purple', value: 'purple', class: 'bg-purple-500' },
+        { name: 'Pink', value: 'pink', class: 'bg-pink-500' },
+        { name: 'Teal', value: 'teal', class: 'bg-teal-500' },
+    ];
 
     return (
         <form onSubmit={handleSave} className="space-y-8">
@@ -801,9 +860,12 @@ function SettingsView({ currentSettings, onSave }) {
                     <div className="space-y-3">
                         {settings.recurringEvents && settings.recurringEvents.map(event => (
                             <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                <div>
-                                    <p className="font-semibold text-sm">{dayLabels[event.dayIndex]} at {event.time} - {event.name}</p>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">{event.isBillable ? "Counts towards utilization" : "Does not count towards utilization"}</p>
+                                <div className="flex items-center">
+                                    <span className={`w-4 h-4 rounded-full mr-3 ${colorOptions.find(c => c.value === event.color)?.class || 'bg-gray-500'}`}></span>
+                                    <div>
+                                        <p className="font-semibold text-sm">{dayLabels[event.dayIndex]} at {event.time} - {event.name}</p>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">{event.isBillable ? "Counts towards utilization" : "Does not count towards utilization"}</p>
+                                    </div>
                                 </div>
                                 <button type="button" onClick={() => handleDeleteRecurringEvent(event.id)} className="p-1 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"><TrashIcon className="w-5 h-5"/></button>
                             </div>
@@ -824,9 +886,17 @@ function SettingsView({ currentSettings, onSave }) {
                         <input type="time" value={newRecurringEvent.time} onChange={e => setNewRecurringEvent({...newRecurringEvent, time: e.target.value})} className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm sm:text-sm" />
                         <input type="text" placeholder="Event Name (e.g., Meeting)" value={newRecurringEvent.name} onChange={e => setNewRecurringEvent({...newRecurringEvent, name: e.target.value})} className="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm sm:text-sm" />
                      </div>
-                     <div className="flex items-center">
-                        <input id="recurringBillable" type="checkbox" checked={newRecurringEvent.isBillable} onChange={e => setNewRecurringEvent({...newRecurringEvent, isBillable: e.target.checked})} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
-                        <label htmlFor="recurringBillable" className="ml-2 block text-sm">Count in Utilization</label>
+                     <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <input id="recurringBillable" type="checkbox" checked={newRecurringEvent.isBillable} onChange={e => setNewRecurringEvent({...newRecurringEvent, isBillable: e.target.checked})} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" />
+                            <label htmlFor="recurringBillable" className="ml-2 block text-sm">Count in Utilization</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm">Color:</span>
+                            {colorOptions.map(color => (
+                                <button key={color.value} type="button" onClick={() => setNewRecurringEvent({...newRecurringEvent, color: color.value})} className={`w-6 h-6 rounded-full ${color.class} ${newRecurringEvent.color === color.value ? 'ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-blue-500' : ''}`}></button>
+                            ))}
+                        </div>
                      </div>
                      <button type="button" onClick={handleAddRecurringEvent} className="w-full px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">Add Recurring Event</button>
                  </div>

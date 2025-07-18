@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from 'firebase/auth';
 
 // --- Icon Components (using inline SVG for simplicity) ---
 const CalendarIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>);
@@ -22,17 +22,19 @@ const ClipboardIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000
 const ClipboardCheckIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 12 2 2 4-4"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>);
 const StickyNoteIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>);
 const PrinterIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>);
+const UserIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+
 
 // --- UI Components ---
 const Card = ({ children, className = '' }) => ( <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm print:shadow-none print:border-gray-300 ${className}`}>{children}</div>);
 const CardHeader = ({ children, className = '' }) => ( <div className={`p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 ${className}`}>{children}</div>);
 const CardContent = ({ children, className = '' }) => ( <div className={`p-4 md:p-5 ${className}`}>{children}</div>);
 
-const UtilizationGauge = ({ percentage, title }) => {
+const UtilizationGauge = ({ percentage, title, goal }) => {
     const pct = isNaN(percentage) ? 0 : percentage;
     const circumference = 2 * Math.PI * 45;
     const offset = circumference - (pct / 100) * circumference;
-    const colorClass = pct >= 80 ? 'text-green-500' : pct >= 50 ? 'text-yellow-500' : 'text-red-500';
+    const colorClass = pct >= goal ? 'text-green-500' : pct >= goal * 0.7 ? 'text-yellow-500' : 'text-red-500';
     
     const ringColorClass = colorClass.replace('text-', 'stroke-');
 
@@ -66,7 +68,6 @@ const UtilizationGauge = ({ percentage, title }) => {
 
 const getSlotClasses = (slotData, isDragging) => {
     let baseClasses = '';
-    // Custom color for recurring events takes precedence
     if (slotData.customColor) {
         switch (slotData.customColor) {
             case 'purple': baseClasses = 'bg-purple-100 dark:bg-purple-900/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-900'; break;
@@ -78,7 +79,6 @@ const getSlotClasses = (slotData, isDragging) => {
             default: break;
         }
     }
-    // Fallback to status-based colors
     if (!baseClasses) {
         switch (slotData.status) {
             case 'Booked': baseClasses = 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900'; break;
@@ -561,27 +561,29 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
             case 'schedule': return <ScheduleView currentDate={currentDate} setCurrentDate={setCurrentDate} currentSlots={currentSlots} onSaveSlot={handleSlotSave} scheduleData={scheduleData} settings={settings} setCopiedWeek={setCopiedWeek} onPasteWeek={handlePasteWeek} copiedWeek={copiedWeek} />;
             case 'reports': return <ReportsView scheduleData={scheduleData} />;
             case 'settings': return <SettingsView currentSettings={settings} onSave={handleSettingsSave} />;
+            case 'profile': return <ProfileView auth={auth} user={user} />;
             default: return <ScheduleView />;
         }
     };
     
     return (
         <div className="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans">
-            <aside className={`fixed top-0 left-0 z-40 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform md:translate-x-0`}>
+            <aside className={`fixed top-0 left-0 z-40 w-64 h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform md:translate-x-0 print:hidden`}>
                 <div className="p-4 border-b dark:border-gray-700"><h2 className="text-2xl font-bold text-blue-600">ClinicFlow</h2></div>
                 <nav className="p-4 space-y-2 flex flex-col h-full">
                     <div className="flex-grow">
                         <NavLink active={page === 'schedule'} onClick={() => setPage('schedule')}><CalendarIcon className="w-5 h-5 mr-3"/> Schedule</NavLink>
                         <NavLink active={page === 'reports'} onClick={() => setPage('reports')}><BarChartIcon className="w-5 h-5 mr-3"/> Reports</NavLink>
                         <NavLink active={page === 'settings'} onClick={() => setPage('settings')}><SettingsIcon className="w-5 h-5 mr-3"/> Settings</NavLink>
+                        <NavLink active={page === 'profile'} onClick={() => setPage('profile')}><UserIcon className="w-5 h-5 mr-3"/> Profile</NavLink>
                     </div>
                     <div className="mt-auto">
                         <NavLink onClick={() => signOut(auth)}><LogOutIcon className="w-5 h-5 mr-3"/> Sign Out</NavLink>
                     </div>
                 </nav>
             </aside>
-            <div className="md:ml-64 transition-all">
-                <header className="sticky top-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 z-30">
+            <div className="md:ml-64 transition-all print:ml-0">
+                <header className="sticky top-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 z-30 print:hidden">
                     <div className="px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16">
                             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="md:hidden text-gray-600 dark:text-gray-300"><MenuIcon className="h-6 w-6" /></button>
@@ -720,19 +722,20 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
     return (
         <>
             <EditSlotModal isOpen={isModalOpen} slot={editingSlot} onSave={onSaveSlot} onClose={handleCloseModal} />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <UtilizationGauge percentage={dailyUtilization} title="Daily" />
-                <UtilizationGauge percentage={weeklyUtilization} title="Weekly" />
-                <UtilizationGauge percentage={monthlyUtilization} title="Monthly" />
-                <UtilizationGauge percentage={ytdUtilization} title="YTD" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8 print:hidden">
+                <UtilizationGauge percentage={dailyUtilization} title="Daily" goal={settings.utilizationGoal || 80} />
+                <UtilizationGauge percentage={weeklyUtilization} title="Weekly" goal={settings.utilizationGoal || 80} />
+                <UtilizationGauge percentage={monthlyUtilization} title="Monthly" goal={settings.utilizationGoal || 80} />
+                <UtilizationGauge percentage={ytdUtilization} title="YTD" goal={settings.utilizationGoal || 80} />
             </div>
             <Card>
-                <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+                <CardHeader className="flex flex-wrap items-center justify-between gap-2 print:hidden">
                     <h3 className="text-lg font-semibold">Weekly View</h3>
                     <div className="flex items-center space-x-2">
                         <button onClick={() => setCopiedWeek(currentSlots)} className="text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600">Copy Week</button>
                         {copiedWeek && <button onClick={onPasteWeek} className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700">Paste Week</button>}
                         <button onClick={() => setCurrentDate(new Date())} className="text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600">Today</button>
+                        <button onClick={() => window.print()} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><PrinterIcon className="w-5 h-5"/></button>
                         <button onClick={() => changeWeek(-1)} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronLeftIcon className="w-5 h-5" /></button>
                         <span className="text-sm font-medium text-center w-48">{weekFormat}</span>
                         <button onClick={() => changeWeek(1)} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronRightIcon className="w-5 h-5" /></button>
@@ -745,7 +748,7 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
                             <div key={day.toISOString()} className="text-center font-semibold text-sm text-gray-500 dark:text-gray-400 relative">
                                 {day.toLocaleDateString('en-US', { weekday: 'short' })}
                                 <span className="block text-xs font-normal">{day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                {dayIndex === todayIndex && timeIndicatorPosition !== null && (
+                                {isCurrentWeek && dayIndex === todayIndex && timeIndicatorPosition !== null && (
                                     <div className="absolute left-0 right-0 h-0.5 bg-red-500" style={{ top: `${timeIndicatorPosition}%` }}>
                                         <div className="absolute -left-1 -top-1 w-2 h-2 bg-red-500 rounded-full"></div>
                                     </div>
@@ -777,8 +780,26 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
 }
 
 function ReportsView({ scheduleData }) {
-    const allSlots = Object.values(scheduleData).flat();
-    const billableSlots = allSlots.filter(s => s.isBillable !== false);
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const [startDate, setStartDate] = useState(firstDayOfMonth);
+    const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+
+    const filteredSlots = Object.values(scheduleData).flat().filter(slot => {
+        const weekKey = slot.id.split('-').slice(0, 2).join('-');
+        const weekStartDate = getDateFromWeekKey(weekKey);
+        const slotDate = new Date(weekStartDate);
+        slotDate.setDate(slotDate.getDate() + slot.day);
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        start.setHours(0,0,0,0);
+        end.setHours(23,59,59,999);
+
+        return slotDate >= start && slotDate <= end;
+    });
+
+    const billableSlots = filteredSlots.filter(s => s.isBillable !== false);
     const workingSlots = billableSlots.filter(s => s.status !== 'Available');
     const totalWorkingSlots = workingSlots.length;
     
@@ -789,14 +810,7 @@ function ReportsView({ scheduleData }) {
         { label: 'Cancelled', value: statusCounts['Cancelled'] || 0, color: '#f97316' }, // Orange
         { label: 'Booked', value: statusCounts['Booked'] || 0, color: '#3b82f6' },
     ];
-    const weeklyTrends = Object.keys(scheduleData).sort().map(weekKey => {
-        const slots = scheduleData[weekKey];
-        const billable = slots.filter(s => s.isBillable !== false);
-        const working = billable.filter(s => s.status !== 'Available');
-        const utilized = working.filter(s => s.status === 'Completed' || s.status === 'No Show').length;
-        const utilization = working.length > 0 ? (utilized / working.length) * 100 : 0;
-        return { week: weekKey.replace(/\d{4}-W/, ''), utilization: Math.round(utilization) };
-    });
+    
     const exportToCSV = () => {
         let csvContent = "data:text/csv;charset=utf-8,Date,Day,Time,Name,Status,Billable\r\n";
         Object.keys(scheduleData).sort().forEach(weekKey => {
@@ -820,6 +834,20 @@ function ReportsView({ scheduleData }) {
     };
     return (
         <div className="space-y-8">
+             <Card>
+                <CardHeader><h3 className="text-lg font-semibold">Custom Report</h3></CardHeader>
+                <CardContent className="flex flex-wrap items-center gap-4">
+                    <div>
+                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date</label>
+                        <input type="date" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                    </div>
+                     <div>
+                        <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">End Date</label>
+                        <input type="date" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                    </div>
+                </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1">
                     <CardHeader><h3 className="text-lg font-semibold">Status Breakdown</h3></CardHeader>
@@ -840,8 +868,10 @@ function ReportsView({ scheduleData }) {
                     </CardContent>
                 </Card>
                 <Card className="lg:col-span-2">
-                    <CardHeader><h3 className="text-lg font-semibold">Weekly Utilization Trend</h3></CardHeader>
-                    <CardContent><svg viewBox="0 0 500 200">{(() => { if(weeklyTrends.length < 2) return <text x="250" y="100" textAnchor="middle" className="fill-current text-gray-500 dark:text-gray-400">Not enough data for trend</text>; const maxUtil = 100; const points = weeklyTrends.map((d, i) => { const x = (i / (weeklyTrends.length - 1)) * 480 + 10; const y = 190 - (d.utilization / maxUtil) * 180; return `${x},${y}`; }).join(' '); return ( <> <polyline fill="none" stroke="#3b82f6" strokeWidth="2" points={points} /> {weeklyTrends.map((d, i) => { const x = (i / (weeklyTrends.length - 1)) * 480 + 10; const y = 190 - (d.utilization / maxUtil) * 180; return <circle key={i} cx={x} cy={y} r="3" fill="#3b82f6" />; })} </> ); })()}</svg></CardContent>
+                    <CardHeader><h3 className="text-lg font-semibold">Utilization for Period</h3></CardHeader>
+                    <CardContent className="flex items-center justify-center h-full">
+                        <UtilizationGauge percentage={calculateUtilization(filteredSlots)} title="Selected Range" goal={80} />
+                    </CardContent>
                 </Card>
             </div>
             <Card>
@@ -926,10 +956,11 @@ function SettingsView({ currentSettings, onSave }) {
     return (
         <form onSubmit={handleSave} className="space-y-8">
             <Card>
-                <CardHeader><h3 className="text-lg font-semibold">Working Hours</h3></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <CardHeader><h3 className="text-lg font-semibold">Working Hours & Utilization Goal</h3></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div><label htmlFor="startTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Working Hours Start</label><input type="time" id="startTime" value={settings.startTime} onChange={e => setSettingsState({...settings, startTime: e.target.value})} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" /></div>
                     <div><label htmlFor="endTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Working Hours End</label><input type="time" id="endTime" value={settings.endTime} onChange={e => setSettingsState({...settings, endTime: e.target.value})} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" /></div>
+                    <div><label htmlFor="utilizationGoal" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Utilization Goal (%)</label><input type="number" id="utilizationGoal" value={settings.utilizationGoal || 80} min="0" max="100" onChange={e => setSettingsState({...settings, utilizationGoal: parseInt(e.target.value)})} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" /></div>
                 </CardContent>
             </Card>
 
@@ -1044,5 +1075,43 @@ function SettingsView({ currentSettings, onSave }) {
                 <button type="submit" className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">Save All Settings</button>
             </div>
         </form>
+    );
+}
+
+function ProfileView({ auth, user }) {
+    const [message, setMessage] = useState('');
+
+    const handlePasswordReset = async () => {
+        if (!user.email) {
+            setMessage("No email associated with this account.");
+            return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, user.email);
+            setMessage("Password reset email sent! Please check your inbox.");
+        } catch (error) {
+            setMessage(`Error: ${error.message}`);
+        }
+    };
+
+    return (
+        <div className="space-y-8">
+            <Card>
+                <CardHeader><h3 className="text-lg font-semibold">My Profile</h3></CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
+                        <p className="mt-1 text-sm text-gray-900 dark:text-white">{user.email}</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                        <button onClick={handlePasswordReset} className="mt-1 text-sm font-medium text-blue-600 hover:text-blue-500">
+                            Send Password Reset Email
+                        </button>
+                    </div>
+                    {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
+                </CardContent>
+            </Card>
+        </div>
     );
 }

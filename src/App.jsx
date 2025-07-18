@@ -18,6 +18,9 @@ const LogOutIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/sv
 const SunIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> );
 const MoonIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> );
 const DollarSignIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>);
+const ClipboardIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>);
+const ClipboardCheckIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 12 2 2 4-4"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>);
+const StickyNoteIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>);
 
 // --- UI Components ---
 const Card = ({ children, className = '' }) => ( <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm ${className}`}>{children}</div>);
@@ -60,34 +63,59 @@ const UtilizationGauge = ({ percentage, title }) => {
     );
 };
 
-const getSlotClasses = (slotData) => {
+const getSlotClasses = (slotData, isDragging) => {
+    let baseClasses = '';
     // Custom color for recurring events takes precedence
     if (slotData.customColor) {
         switch (slotData.customColor) {
-            case 'purple': return 'bg-purple-100 dark:bg-purple-900/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-900';
-            case 'pink': return 'bg-pink-100 dark:bg-pink-900/50 border-pink-300 dark:border-pink-700 text-pink-800 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900';
-            case 'teal': return 'bg-teal-100 dark:bg-teal-900/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-900';
-            case 'gray': return 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600';
-            case 'red': return 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900';
-            case 'orange': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
+            case 'purple': baseClasses = 'bg-purple-100 dark:bg-purple-900/50 border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-900'; break;
+            case 'pink': baseClasses = 'bg-pink-100 dark:bg-pink-900/50 border-pink-300 dark:border-pink-700 text-pink-800 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900'; break;
+            case 'teal': baseClasses = 'bg-teal-100 dark:bg-teal-900/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-900'; break;
+            case 'gray': baseClasses = 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'; break;
+            case 'red': baseClasses = 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900'; break;
+            case 'orange': baseClasses = 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900'; break;
             default: break;
         }
     }
     // Fallback to status-based colors
-    switch (slotData.status) {
-        case 'Booked': return 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900';
-        case 'Completed': return 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900';
-        case 'Cancelled': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
-        case 'No Show': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
-        default: return 'bg-gray-100 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+    if (!baseClasses) {
+        switch (slotData.status) {
+            case 'Booked': baseClasses = 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900'; break;
+            case 'Completed': baseClasses = 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900'; break;
+            case 'Cancelled': baseClasses = 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900'; break;
+            case 'No Show': baseClasses = 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900'; break;
+            default: baseClasses = 'bg-gray-100 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
+        }
     }
+    return `${baseClasses} ${isDragging ? 'opacity-50' : ''}`;
 };
 
-const Slot = ({ slotData, onEdit }) => {
+const Slot = ({ slotData, onEdit, onDragStart }) => {
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragStart = (e) => {
+        setIsDragging(true);
+        onDragStart(e, slotData);
+    };
+
+    const handleDragEnd = () => {
+        setIsDragging(false);
+    };
+
     return (
-        <div className={`relative slot-${slotData.id}`}>
-            <div className={`p-2 rounded-lg border text-xs cursor-pointer h-full flex flex-col justify-center transition-colors ${getSlotClasses(slotData)}`} onClick={() => onEdit(slotData)}>
+        <div
+            className={`relative slot-${slotData.id}`}
+            draggable="true"
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div 
+                className={`p-2 rounded-lg border text-xs cursor-grab h-full flex flex-col justify-center transition-colors ${getSlotClasses(slotData, isDragging)}`}
+                onClick={() => onEdit(slotData)}
+                title={slotData.notes || ''}
+            >
                 {slotData.isBillable === false && <DollarSignIcon className="absolute top-1 right-1 w-3 h-3 text-gray-400 dark:text-gray-500" />}
+                {slotData.notes && <StickyNoteIcon className="absolute top-1 left-1 w-3 h-3 text-gray-400 dark:text-gray-500" />}
                 <p className="font-semibold">{slotData.time}</p>
                 <p className="truncate">{slotData.name || 'Standard'}</p>
                 <p className="font-light">{slotData.status}</p>
@@ -118,6 +146,7 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
     const [isBillable, setIsBillable] = useState(true);
     const [makeRecurring, setMakeRecurring] = useState(false);
     const [customColor, setCustomColor] = useState(null);
+    const [notes, setNotes] = useState('');
 
     useEffect(() => {
         if (slot) {
@@ -126,6 +155,7 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
             setIsBillable(slot.isBillable !== false);
             setMakeRecurring(false); // Reset on new slot
             setCustomColor(slot.customColor || null);
+            setNotes(slot.notes || '');
         }
     }, [slot]);
 
@@ -141,7 +171,7 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
             color: customColor
         } : null;
 
-        onSave(slot.id, { name, status: currentStatus, isBillable }, recurrenceInfo);
+        onSave(slot.id, { name, status: currentStatus, isBillable, notes }, recurrenceInfo);
         onClose();
     };
     
@@ -177,6 +207,10 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
                                 </button>
                             ))}
                         </div>
+                    </div>
+                     <div>
+                        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
+                        <textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows="3" className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"></textarea>
                     </div>
                      <div className="space-y-2">
                         <div className="flex items-center">
@@ -386,6 +420,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
     const [scheduleData, setScheduleData] = useState({});
     const [currentSlots, setCurrentSlots] = useState([]);
     const [settings, setSettings] = useState({ startTime: '09:00', endTime: '17:00', timeSlots: [], timeBlocks: [], recurringEvents: [] });
+    const [copiedWeek, setCopiedWeek] = useState(null);
 
     // Load Settings and Schedule Data from the user-specific path
     useEffect(() => {
@@ -489,8 +524,22 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
             const filteredEvents = existingEvents.filter(e => !(e.dayIndex === eventToAdd.dayIndex && e.time === eventToAdd.time));
 
             const updatedEvents = [...filteredEvents, eventToAdd];
-            await setDoc(settingsDocRef, { ...settings, recurringEvents: updatedEvents });
+            await setDoc(settingsDocRef, { ...settings, recurringEvents: updatedEvents }, { merge: true });
         }
+    };
+    
+    const handlePasteWeek = async () => {
+        if (!copiedWeek || !db || !user) return;
+        const weekKey = getWeekKey(currentDate);
+        
+        // Update IDs of copied slots to match the new week
+        const newSlotsForWeek = copiedWeek.map((slot, index) => ({
+            ...slot,
+            id: `${weekKey}-${index}`
+        }));
+
+        const scheduleDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/schedule`, weekKey);
+        await setDoc(scheduleDocRef, { slots: newSlotsForWeek });
     };
 
     const handleSettingsSave = async (newSettings) => {
@@ -508,7 +557,7 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
 
     const renderPage = () => {
         switch (page) {
-            case 'schedule': return <ScheduleView currentDate={currentDate} setCurrentDate={setCurrentDate} currentSlots={currentSlots} onSaveSlot={handleSlotSave} scheduleData={scheduleData} settings={settings} />;
+            case 'schedule': return <ScheduleView currentDate={currentDate} setCurrentDate={setCurrentDate} currentSlots={currentSlots} onSaveSlot={handleSlotSave} scheduleData={scheduleData} settings={settings} setCopiedWeek={setCopiedWeek} onPasteWeek={handlePasteWeek} copiedWeek={copiedWeek} />;
             case 'reports': return <ReportsView scheduleData={scheduleData} />;
             case 'settings': return <SettingsView currentSettings={settings} onSave={handleSettingsSave} />;
             default: return <ScheduleView />;
@@ -556,9 +605,10 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
 
 // --- Page Components ---
 
-function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, scheduleData, settings }) {
+function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, scheduleData, settings, setCopiedWeek, onPasteWeek, copiedWeek }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSlot, setEditingSlot] = useState(null);
+    const [draggedSlot, setDraggedSlot] = useState(null);
 
     const handleEditSlot = (slot) => {
         setEditingSlot(slot);
@@ -568,6 +618,31 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingSlot(null);
+    };
+
+    const handleDragStart = (e, slot) => {
+        setDraggedSlot(slot);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault(); // Necessary to allow dropping
+    };
+
+    const handleDrop = (e, targetSlot) => {
+        e.preventDefault();
+        if (!draggedSlot || draggedSlot.id === targetSlot.id) return;
+
+        // Create a copy of the dragged slot's data for the new location
+        const newSlotData = { ...draggedSlot, id: targetSlot.id, day: targetSlot.day, time: targetSlot.time };
+        // Create a default "Available" slot for the old location
+        const oldSlotData = { ...targetSlot, id: draggedSlot.id, day: draggedSlot.day, time: draggedSlot.time, name: 'Standard', status: 'Available', isBillable: true, customColor: null, notes: '' };
+        
+        // Update both slots in one go
+        onSaveSlot(newSlotData.id, newSlotData);
+        onSaveSlot(oldSlotData.id, oldSlotData);
+
+        setDraggedSlot(null);
     };
 
     const calculateUtilization = useCallback((slotsToCalculate) => {
@@ -654,6 +729,8 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
                 <CardHeader className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-lg font-semibold">Weekly View</h3>
                     <div className="flex items-center space-x-2">
+                        <button onClick={() => setCopiedWeek(currentSlots)} className="text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600">Copy Week</button>
+                        {copiedWeek && <button onClick={onPasteWeek} className="text-sm font-medium px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700">Paste Week</button>}
                         <button onClick={() => setCurrentDate(new Date())} className="text-sm font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600">Today</button>
                         <button onClick={() => changeWeek(-1)} className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"><ChevronLeftIcon className="w-5 h-5" /></button>
                         <span className="text-sm font-medium text-center w-48">{weekFormat}</span>
@@ -682,11 +759,12 @@ function ScheduleView({ currentDate, setCurrentDate, currentSlots, onSaveSlot, s
                                 </div>
                                 {weekDays.map((day, dayIndex) => {
                                     const blockInfo = getSlotBlockInfo(day, slotSetting.time, settings.timeBlocks || []);
-                                    if (blockInfo) {
-                                        return <div key={`${dayIndex}-${slotSetting.time}`}><BlockedSlot blockInfo={blockInfo} /></div>;
-                                    }
                                     const slot = currentSlots.find(s => s.day === dayIndex && s.time === slotSetting.time);
-                                    return <div key={`${dayIndex}-${slotSetting.time}`}>{slot ? <Slot slotData={slot} onEdit={handleEditSlot} /> : <div className="p-2 h-full"></div>}</div>;
+                                    return (
+                                        <div key={`${dayIndex}-${slotSetting.time}`} onDragOver={handleDragOver} onDrop={(e) => slot && handleDrop(e, slot)}>
+                                            {blockInfo ? <BlockedSlot blockInfo={blockInfo} /> : (slot ? <Slot slotData={slot} onEdit={handleEditSlot} onDragStart={handleDragStart} /> : <div className="p-2 h-full"></div>)}
+                                        </div>
+                                    );
                                 })}
                             </React.Fragment>
                         ))}

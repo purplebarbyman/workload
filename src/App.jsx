@@ -68,6 +68,8 @@ const getSlotClasses = (slotData) => {
             case 'pink': return 'bg-pink-100 dark:bg-pink-900/50 border-pink-300 dark:border-pink-700 text-pink-800 dark:text-pink-200 hover:bg-pink-200 dark:hover:bg-pink-900';
             case 'teal': return 'bg-teal-100 dark:bg-teal-900/50 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-900';
             case 'gray': return 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600';
+            case 'red': return 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900';
+            case 'orange': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
             default: break;
         }
     }
@@ -75,8 +77,8 @@ const getSlotClasses = (slotData) => {
     switch (slotData.status) {
         case 'Booked': return 'bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900';
         case 'Completed': return 'bg-green-100 dark:bg-green-900/50 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900';
-        case 'Cancelled': return 'bg-red-100 dark:bg-red-900/50 border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900';
-        case 'No Show': return 'bg-yellow-100 dark:bg-yellow-900/50 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900';
+        case 'Cancelled': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
+        case 'No Show': return 'bg-orange-100 dark:bg-orange-900/50 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-200 hover:bg-orange-200 dark:hover:bg-orange-900';
         default: return 'bg-gray-100 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700';
     }
 };
@@ -101,11 +103,21 @@ const BlockedSlot = ({ blockInfo }) => (
     </div>
 );
 
+const colorOptions = [
+    { name: 'Gray', value: 'gray', class: 'bg-gray-500' },
+    { name: 'Purple', value: 'purple', class: 'bg-purple-500' },
+    { name: 'Pink', value: 'pink', class: 'bg-pink-500' },
+    { name: 'Teal', value: 'teal', class: 'bg-teal-500' },
+    { name: 'Red', value: 'red', class: 'bg-red-500' },
+    { name: 'Orange', value: 'orange', class: 'bg-orange-500' },
+];
+
 const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
     const [name, setName] = useState('');
     const [currentStatus, setCurrentStatus] = useState('');
     const [isBillable, setIsBillable] = useState(true);
     const [makeRecurring, setMakeRecurring] = useState(false);
+    const [customColor, setCustomColor] = useState(null);
 
     useEffect(() => {
         if (slot) {
@@ -113,6 +125,7 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
             setCurrentStatus(slot.status || 'Available');
             setIsBillable(slot.isBillable !== false);
             setMakeRecurring(false); // Reset on new slot
+            setCustomColor(slot.customColor || null);
         }
     }, [slot]);
 
@@ -125,7 +138,7 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
             name: name,
             status: currentStatus,
             isBillable: isBillable,
-            customColor: slot.customColor || null
+            color: customColor
         } : null;
 
         onSave(slot.id, { name, status: currentStatus, isBillable }, recurrenceInfo);
@@ -175,6 +188,16 @@ const EditSlotModal = ({ isOpen, slot, onSave, onClose }) => {
                             <label htmlFor="makeRecurring" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Make this a recurring event</label>
                         </div>
                     </div>
+                    {makeRecurring && (
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Recurring Color</label>
+                             <div className="flex items-center space-x-2">
+                                {colorOptions.map(color => (
+                                    <button key={color.value} type="button" onClick={() => setCustomColor(color.value)} className={`w-6 h-6 rounded-full ${color.class} ${customColor === color.value ? 'ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-blue-500' : ''}`}></button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
                     <button onClick={onClose} type="button" className="px-4 py-2 text-sm font-medium rounded-md bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
@@ -443,25 +466,21 @@ function Dashboard({ auth, db, user, theme, toggleTheme }) {
     const handleSlotSave = async (id, newValues, recurrenceInfo) => {
         if (!db || !user) return;
         
-        // If making an event recurring, we remove any custom color so it can be controlled by the recurring event setting.
         const finalValues = { ...newValues };
         if (recurrenceInfo) {
-            finalValues.customColor = recurrenceInfo.customColor;
+            finalValues.customColor = recurrenceInfo.color;
         } else {
-            // If just a single edit, remove custom color to revert to status-based coloring
             const oldSlot = currentSlots.find(s => s.id === id);
             if (oldSlot.customColor) {
                 finalValues.customColor = null;
             }
         }
 
-        // 1. Update the current week's slot
         const weekKey = getWeekKey(currentDate);
         const updatedSlots = currentSlots.map(slot => slot.id === id ? { ...slot, ...finalValues } : slot);
         const scheduleDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/schedule`, weekKey);
         await setDoc(scheduleDocRef, { slots: updatedSlots });
 
-        // 2. If recurrence is requested, update the settings
         if (recurrenceInfo) {
             const settingsDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/settings/main`);
             const eventToAdd = { ...recurrenceInfo, id: crypto.randomUUID() };
@@ -687,8 +706,8 @@ function ReportsView({ scheduleData }) {
     const statusCounts = workingSlots.reduce((acc, slot) => { acc[slot.status] = (acc[slot.status] || 0) + 1; return acc; }, {});
     const pieData = [
         { label: 'Completed', value: statusCounts['Completed'] || 0, color: '#22c55e' },
-        { label: 'No Show', value: statusCounts['No Show'] || 0, color: '#facc15' },
-        { label: 'Cancelled', value: statusCounts['Cancelled'] || 0, color: '#ef4444' },
+        { label: 'No Show', value: statusCounts['No Show'] || 0, color: '#f97316' }, // Orange
+        { label: 'Cancelled', value: statusCounts['Cancelled'] || 0, color: '#f97316' }, // Orange
         { label: 'Booked', value: statusCounts['Booked'] || 0, color: '#3b82f6' },
     ];
     const weeklyTrends = Object.keys(scheduleData).sort().map(weekKey => {
@@ -819,12 +838,6 @@ function SettingsView({ currentSettings, onSave }) {
     };
     
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Daily'];
-    const colorOptions = [
-        { name: 'Gray', value: 'gray', class: 'bg-gray-500' },
-        { name: 'Purple', value: 'purple', class: 'bg-purple-500' },
-        { name: 'Pink', value: 'pink', class: 'bg-pink-500' },
-        { name: 'Teal', value: 'teal', class: 'bg-teal-500' },
-    ];
 
     return (
         <form onSubmit={handleSave} className="space-y-8">

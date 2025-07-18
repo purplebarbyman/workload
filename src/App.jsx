@@ -272,12 +272,12 @@ const getWeekDays = (date) => {
 // IMPORTANT: Replace these placeholder values with your actual Firebase project configuration.
 // You can find this in your Firebase project settings.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "YOUR_AUTH_DOMAIN_HERE",
-  projectId: "YOUR_PROJECT_ID_HERE",
-  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_APP_ID_HERE"
+  apiKey: "AIzaSyDrP3R8l5-0Hi6VTn4mr_r5xB1EWP78Spk",
+  authDomain: "workload-credit.firebaseapp.com",
+  projectId: "workload-credit",
+  storageBucket: "workload-credit.firebasestorage.app",
+  messagingSenderId: "559035838771",
+  appId: "1:559035838771:web:8cccf50011abe2cfe40e46"
 };
 
 const appId = firebaseConfig.appId;

@@ -21,9 +21,10 @@ const DollarSignIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/200
 const ClipboardIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>);
 const ClipboardCheckIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 12 2 2 4-4"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>);
 const StickyNoteIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v6h6"/></svg>);
+const PrinterIcon = (props) => ( <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>);
 
 // --- UI Components ---
-const Card = ({ children, className = '' }) => ( <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm ${className}`}>{children}</div>);
+const Card = ({ children, className = '' }) => ( <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm print:shadow-none print:border-gray-300 ${className}`}>{children}</div>);
 const CardHeader = ({ children, className = '' }) => ( <div className={`p-4 md:p-5 border-b border-gray-200 dark:border-gray-700 ${className}`}>{children}</div>);
 const CardContent = ({ children, className = '' }) => ( <div className={`p-4 md:p-5 ${className}`}>{children}</div>);
 
@@ -271,12 +272,12 @@ const getWeekDays = (date) => {
 // IMPORTANT: Replace these placeholder values with your actual Firebase project configuration.
 // You can find this in your Firebase project settings.
 const firebaseConfig = {
-  apiKey: "AIzaSyDrP3R8l5-0Hi6VTn4mr_r5xB1EWP78Spk",
-  authDomain: "workload-credit.firebaseapp.com",
-  projectId: "workload-credit",
-  storageBucket: "workload-credit.firebasestorage.app",
-  messagingSenderId: "559035838771",
-  appId: "1:559035838771:web:8cccf50011abe2cfe40e46"
+  apiKey: "YOUR_API_KEY_HERE",
+  authDomain: "YOUR_AUTH_DOMAIN_HERE",
+  projectId: "YOUR_PROJECT_ID_HERE",
+  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+  appId: "YOUR_APP_ID_HERE"
 };
 
 const appId = firebaseConfig.appId;
@@ -905,6 +906,11 @@ function SettingsView({ currentSettings, onSave }) {
     
     const handleAddRecurringEvent = () => {
         const eventToAdd = { ...newRecurringEvent, id: crypto.randomUUID(), status: 'Booked' };
+        
+        // Smart color suggestions
+        if (eventToAdd.name.toLowerCase().includes('lunch')) eventToAdd.color = 'purple';
+        if (eventToAdd.name.toLowerCase().includes('meeting')) eventToAdd.color = 'red';
+
         const updatedEvents = [...(settings.recurringEvents || []), eventToAdd];
         setSettingsState({ ...settings, recurringEvents: updatedEvents });
         setNewRecurringEvent({ dayIndex: 5, time: '09:00', name: '', isBillable: false, color: 'gray' });
